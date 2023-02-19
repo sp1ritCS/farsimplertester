@@ -1,0 +1,75 @@
+FarSimpleTester - Validate output of Java software
+
+This software will parse protocol files, that contain inputs and
+outputs of the software you want to validate. The protocol format is
+currently shared with the format of I-Al-Istannens "SimpleCodeTester".
+
+Synopsis: <fst> [OPTIONS...] JAVA_CLASS PROTOCOL_FILE
+	<fst> being the binary of this program
+	JAVA_CLASS being the class containing the main method
+	PROTOCOL_FILE being the protocol file to test against
+Options:
+	-l, --show-log
+		Log the input and outputs of the current test run.
+	-cCLASS_PATH, --class-path CLASS_PATH
+		Set the classpath the Java VM will be launched with.
+Exit Status:
+	0: Successful completion
+	1: The test run failed
+	2: Invalid usage of command line parameters
+
+Note: FST is *very* simple, and it will deadlock when the currently
+tested process expects input while the protocol awaits output. So
+you'll likely want to launch it within GNU timeout (coreutils).
+
+
+Please send any inqueries, patches/changesets via git send-email,
+git pulls, etc. to sp1rit@national.shitposting.agency or
+uwkce@student.kit.edu.
+
+
+
+To use FST within your project you can add something like this to your
+Makefile:
+	FST := <path/to/fst>
+	TESTS_DIR := tests/
+	PROTOCOL_TEST_TIMEOUT := 0.2
+
+	[...]
+
+	test:
+		@for protocol in $(TESTS_DIR)/*.protocol; do \
+			echo "Testing $$protocol..."; \
+			timeout $(PROTOCOL_TEST_TIMEOUT) $(FST) --class-path $(TARGET_DIR) <JAVA_CLASS> "$$protocol" || timeout $(PROTOCOL_TEST_TIMEOUT) $(FST) --show-log --class-path $(TARGET_DIR) <JAVA_CLASS> "$$protocol"; \
+			if [ $$? -eq 124 ]; then \
+				echo -e "\e[1;91mTest timeed out\e[0m" ; \
+			fi ; \
+		done
+
+
+
+If you want to download all tests from "SimpleCodeTester" you could add
+something like the following to the Makefile of your project:
+	CODETESTER_USERNAME := <username>
+	CODETESTER_CATEGORY := <category id>
+
+	[...]
+
+	codetesterLogin:
+		secret-tool clear codetester.token $(CODETESTER_USERNAME) || true
+		secret-tool store --label "CodeTester Account" codetester.token $(CODETESTER_USERNAME) <<< \
+			$(shell curl https://codetester.ialistannen.de/login -X POST -F username=$(CODETESTER_USERNAME) -F password=$(shell secret-tool lookup codetester.user $(CODETESTER_USERNAME)) | jq .token)
+
+	codetesterPullTests:
+		ACCESS_TOKEN=$(shell curl 'https://codetester.ialistannen.de/login/get-access-token' -X POST \
+			-F "refreshToken=$(shell secret-tool lookup codetester.token $(CODETESTER_USERNAME))" | jq -r .token); \
+		PROTOCOLS=$$(curl 'https://codetester.ialistannen.de/checks/get-all' \
+			-H "Authorization: Bearer $$ACCESS_TOKEN" | jq -r '.[] | select(.category.id == $(CODETESTER_CATEGORY)) | {id,name} | tostring'); \
+		while IFS= read -r protocol; do \
+			curl "https://codetester.ialistannen.de/checks/get-content?id=$$(jq -r .id <<< $$protocol)" \
+				-H "Authorization: Bearer $$ACCESS_TOKEN" | jq -r '.content.text' > "$(TESTS_DIR)/$$(jq -r .name <<< $$protocol)".protocol; \
+		done <<< $$PROTOCOLS
+
+be aware that you first need to invoke
+	secret-tool store --label "CodeTester Account" codetester.user <username>
+to store the password of your account.
