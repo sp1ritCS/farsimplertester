@@ -29,10 +29,12 @@ int main(int argc, char** argv) {
 	gchar* class = NULL;
 	gboolean show_log = FALSE;
 	gchar* protocol_path = NULL;
+	gchar* java_agent = NULL;
 
 	static struct option long_options[] = {
 		{"class-path", required_argument, 0, 'c'},
 		{"show-log", no_argument, 0, 'l'},
+		{"java-agent", required_argument, 0, 'a'},
 		{0, 0, 0, 0}
 	};
 
@@ -41,7 +43,7 @@ int main(int argc, char** argv) {
 		invocation = argv[0];
 
 	int option_idx = 0;
-	while ((c = getopt_long(argc, argv, "c:l", long_options, &option_idx)) != -1) {
+	while ((c = getopt_long(argc, argv, "c:l:a", long_options, &option_idx)) != -1) {
 		switch (c) {
 			case 'c':
 				class_path = optarg;
@@ -49,14 +51,17 @@ int main(int argc, char** argv) {
 			case 'l':
 				show_log = TRUE;
 				break;
+			case 'a':
+				java_agent = optarg;
+				break;
 			default: /* (?) */
-				g_printerr("Usage: %s [--class-path class_path/] [--show-log] <tld.domain.name.Class> <./path/to/protocol.protocol>\n", invocation);
+				g_printerr("Usage: %s [--java-agent path/to/agent.jar] [--class-path class_path/] [--show-log] <tld.domain.name.Class> <./path/to/protocol.protocol>\n", invocation);
 				return 2;
 		}
 	}
 
 	if (optind != argc - 2) {
-		g_printerr("Usage: %s [--class-path class_path/] [--show-log] <tld.domain.name.Class> <./path/to/protocol.protocol>\n", invocation);
+		g_printerr("Usage: %s [--java-agent path/to/agent.jar] [--class-path class_path/] [--show-log] <tld.domain.name.Class> <./path/to/protocol.protocol>\n", invocation);
 		return 2;
 	}
 
@@ -69,6 +74,11 @@ int main(int argc, char** argv) {
 	g_strv_builder_add(args_builder, "java");
 	if (class_path) {
 		g_strv_builder_add_many(args_builder, "-classpath", class_path, NULL);
+	}
+	if (java_agent) {
+		gchar* agent_opt = g_strdup_printf("-javaagent:%s", java_agent);
+		g_strv_builder_add(args_builder, agent_opt);
+		g_free(agent_opt);
 	}
 	g_strv_builder_add(args_builder, class);
 
