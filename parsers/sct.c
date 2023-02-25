@@ -51,7 +51,7 @@ GList* sct_parse_protocol(GFile* protocol, GStrvBuilder* args) {
 				switch (byte) {
 					case 'r': {
 						gchar* pattern = fst_read_stream_to_eol(protocol_stream, NULL, 0);
-						instructions = g_list_append(instructions, fst_instruction_output_regex_new(pattern));
+						instructions = g_list_prepend(instructions, fst_instruction_output_regex_new(pattern));
 						g_free(pattern);
 						} break;
 					default:
@@ -61,10 +61,10 @@ GList* sct_parse_protocol(GFile* protocol, GStrvBuilder* args) {
 				break;
 			case '>':
 				g_input_stream_read(protocol_stream, &byte, 1, NULL, NULL);
-				instructions = g_list_append(instructions, fst_instruction_input_new(fst_read_stream_to_eol(protocol_stream, NULL, 0)));
+				instructions = g_list_prepend(instructions, fst_instruction_input_new(fst_read_stream_to_eol(protocol_stream, NULL, 0)));
 				break;
 			case '\n':
-				instructions = g_list_append(instructions, fst_instruction_output_basic_new(g_strdup("")));
+				instructions = g_list_prepend(instructions, fst_instruction_output_basic_new(g_strdup("")));
 				break;
 			case '$': 
 				if (g_input_stream_read(protocol_stream, &byte, 1, NULL, NULL) < 0) {
@@ -92,12 +92,12 @@ GList* sct_parse_protocol(GFile* protocol, GStrvBuilder* args) {
 				}
 				break;
 			default:
-				instructions = g_list_append(instructions, fst_instruction_output_basic_new(fst_read_stream_to_eol(protocol_stream, &byte, 1)));
+				instructions = g_list_prepend(instructions, fst_instruction_output_basic_new(fst_read_stream_to_eol(protocol_stream, &byte, 1)));
 		}
 	}
 
 	g_object_unref(protocol_stream);
-	return instructions;
+	return g_list_reverse(instructions);
 err:
 	g_list_free_full(instructions, g_object_unref);
 	g_object_unref(protocol_stream);
