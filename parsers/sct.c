@@ -29,7 +29,8 @@ GList* sct_parse_protocol(GFile* protocol, GStrvBuilder* args) {
 	g_return_val_if_fail(G_IS_FILE(protocol), NULL);
 
 	GError* err = NULL;
-	GInputStream* protocol_stream = G_INPUT_STREAM(g_file_read(protocol, NULL, &err));
+	GInputStream* protocol_stream_real = G_INPUT_STREAM(g_file_read(protocol, NULL, &err));
+	GInputStream* protocol_stream = g_buffered_input_stream_new(protocol_stream_real);
 	if (err) {
 		g_critical("Failed to open file for reading: %s\n", err->message);
 		return NULL;
@@ -97,9 +98,11 @@ GList* sct_parse_protocol(GFile* protocol, GStrvBuilder* args) {
 	}
 
 	g_object_unref(protocol_stream);
+	g_object_unref(protocol_stream_real);
 	return g_list_reverse(instructions);
 err:
 	g_list_free_full(instructions, g_object_unref);
 	g_object_unref(protocol_stream);
+	g_object_unref(protocol_stream_real);
 	return NULL;
 }
