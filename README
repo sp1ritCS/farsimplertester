@@ -66,9 +66,9 @@ something like the following to the Makefile of your project:
 		PROTOCOLS=$$(curl 'https://codetester.ialistannen.de/checks/get-all' \
 			-H "Authorization: Bearer $$ACCESS_TOKEN" | jq -r '.[] | select(.category.id == $(CODETESTER_CATEGORY)) | {id,name} | tostring'); \
 		while IFS= read -r protocol; do \
-			BODY=$$(curl "https://codetester.ialistannen.de/checks/get-content?id=$$(jq -r .id <<< $$protocol)" \
-				-H "Authorization: Bearer $$ACCESS_TOKEN"); \
-			echo $$BODY | jq -r '.content.text' > "$(TESTS_DIR)/$$(jq -r .name <<< $$protocol)".protocol; \
+			BODY="$$(curl "https://codetester.ialistannen.de/checks/get-content?id=$$(jq -r .id <<< $$protocol)" \
+				-H "Authorization: Bearer $$ACCESS_TOKEN")"; \
+			echo "$$BODY" | jq -r '.content.text' > "$(TESTS_DIR)/$$(jq -r .name <<< $$protocol | sed -e 's|/|_|g')".protocol; \
 			while IFS= read -r auxFile; do \
 				mkdir -p $$(dirname "$$(echo $$auxFile | jq -r '.name')"); \
 				echo $$auxFile | jq -r '.content' | sed '$${/^$$/d;}' > $$(echo $$auxFile | jq -r '.name'); \
